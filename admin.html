@@ -1,0 +1,956 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel - Futsal Booking System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f5f5;
+            color: #333;
+        }
+
+        .login-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .login-box {
+            background: white;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .login-box h1 {
+            color: #667eea;
+            margin-bottom: 10px;
+            text-align: center;
+            font-size: 1.8em;
+        }
+
+        .login-box p {
+            color: #999;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 0.9em;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 500;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 1em;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn-login {
+            width: 100%;
+            padding: 12px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .btn-login:hover {
+            background: #5568d3;
+        }
+
+        .alert {
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            font-size: 0.9em;
+        }
+
+        .alert-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        /* Admin Dashboard */
+        .dashboard {
+            display: none;
+        }
+
+        .dashboard.active {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        .sidebar {
+            width: 250px;
+            background: #2c3e50;
+            color: white;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .sidebar h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 1.2em;
+        }
+
+        .sidebar-item {
+            padding: 12px 15px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.3s;
+            margin-bottom: 8px;
+            font-size: 0.95em;
+        }
+
+        .sidebar-item:hover,
+        .sidebar-item.active {
+            background: #667eea;
+        }
+
+        .sidebar-divider {
+            border-top: 1px solid #444;
+            margin: 15px 0;
+        }
+
+        .main-content {
+            flex: 1;
+            background: #f5f5f5;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        .top-bar {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .top-bar h2 {
+            color: #667eea;
+            margin: 0;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9em;
+            transition: all 0.3s;
+            text-decoration: none;
+        }
+
+        .btn-secondary {
+            background: #999;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #777;
+        }
+
+        .btn-danger {
+            background: #f44336;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #d32f2f;
+        }
+
+        .btn-success {
+            background: #4caf50;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #388e3c;
+        }
+
+        .section {
+            display: none;
+        }
+
+        .section.active {
+            display: block;
+        }
+
+        .controls {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .control-group {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin-bottom: 15px;
+        }
+
+        .control-item {
+            flex: 1;
+            min-width: 150px;
+        }
+
+        .control-item label {
+            display: block;
+            margin-bottom: 5px;
+            color: #333;
+            font-weight: 500;
+            font-size: 0.9em;
+        }
+
+        .control-item input,
+        .control-item select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+
+        .schedule-table {
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #333;
+        }
+
+        tr:hover {
+            background: #f8f9fa;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8em;
+            font-weight: 600;
+        }
+
+        .status-booked {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status-available {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn-sm {
+            padding: 6px 12px;
+            font-size: 0.8em;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-content h3 {
+            color: #667eea;
+            margin-bottom: 20px;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .modal-buttons button {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #667eea;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-left: 4px solid #667eea;
+        }
+
+        .stat-label {
+            color: #999;
+            font-size: 0.9em;
+            margin-bottom: 5px;
+        }
+
+        .stat-value {
+            color: #333;
+            font-size: 1.8em;
+            font-weight: 600;
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 70px;
+            }
+
+            .sidebar-item {
+                padding: 12px 8px;
+                font-size: 0;
+            }
+
+            .sidebar-item::before {
+                content: '⚙️';
+                font-size: 1.2em;
+            }
+
+            .control-group {
+                flex-direction: column;
+            }
+
+            .modal-content {
+                width: 95%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Login Form -->
+    <div id="loginForm" class="login-container">
+        <div class="login-box">
+            <h1>🔐 Admin Panel</h1>
+            <p>Futsal Booking System</p>
+            
+            <div id="loginError" class="alert alert-error" style="display: none;"></div>
+            
+            <form onsubmit="handleLogin(event)">
+                <div class="form-group">
+                    <label>Username</label>
+                    <input type="text" id="username" placeholder="Masukkan username" required>
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" id="password" placeholder="Masukkan password" required>
+                </div>
+                <button type="submit" class="btn-login">Masuk</button>
+            </form>
+
+            <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #e0e0e0;">
+                <p style="color: #999; font-size: 0.85em; margin-bottom: 10px;">Demo Login:</p>
+                <p style="color: #999; font-size: 0.85em;">
+                    Jogo: admin_jogo / admin123<br>
+                    4R: admin_4r / admin123
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dashboard -->
+    <div id="dashboard" class="dashboard">
+        <div class="sidebar">
+            <h2>Menu</h2>
+            <div class="sidebar-item active" onclick="showSection('dashboard')">📊 Dashboard</div>
+            <div class="sidebar-item" onclick="showSection('schedule')">📅 Jadwal</div>
+            <div class="sidebar-item" onclick="showSection('bookings')">📝 Booking</div>
+            <div class="sidebar-item" onclick="showSection('reports')">📈 Laporan</div>
+            <div class="sidebar-divider"></div>
+            <div class="sidebar-item" onclick="logout()">🚪 Logout</div>
+        </div>
+
+        <div class="main-content">
+            <!-- Dashboard Section -->
+            <div id="dashboard" class="section active">
+                <div class="top-bar">
+                    <h2>📊 Dashboard</h2>
+                </div>
+                <div id="dashboardContent" class="loading">
+                    <div class="spinner"></div>
+                    <p>Memuat data...</p>
+                </div>
+            </div>
+
+            <!-- Schedule Section -->
+            <div id="schedule" class="section">
+                <div class="top-bar">
+                    <h2>📅 Jadwal Harian</h2>
+                    <button class="btn btn-success" onclick="openAddBookingModal()">+ Tambah Booking</button>
+                </div>
+
+                <div class="controls">
+                    <div class="control-group">
+                        <div class="control-item">
+                            <label>Tanggal</label>
+                            <input type="date" id="scheduleDate" onchange="loadScheduleData()">
+                        </div>
+                    </div>
+                </div>
+
+                <div id="scheduleContent" class="loading">
+                    <div class="spinner"></div>
+                    <p>Memuat jadwal...</p>
+                </div>
+            </div>
+
+            <!-- Bookings Section -->
+            <div id="bookings" class="section">
+                <div class="top-bar">
+                    <h2>📝 Daftar Booking</h2>
+                </div>
+
+                <div class="controls">
+                    <div class="control-group">
+                        <div class="control-item">
+                            <label>Dari Tanggal</label>
+                            <input type="date" id="startDate">
+                        </div>
+                        <div class="control-item">
+                            <label>Hingga Tanggal</label>
+                            <input type="date" id="endDate">
+                        </div>
+                        <div class="control-item">
+                            <button class="btn btn-success" onclick="loadBookings()">Filter</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="bookingsContent" class="loading">
+                    <div class="spinner"></div>
+                    <p>Memuat booking...</p>
+                </div>
+            </div>
+
+            <!-- Reports Section -->
+            <div id="reports" class="section">
+                <div class="top-bar">
+                    <h2>📈 Laporan</h2>
+                </div>
+
+                <div class="controls">
+                    <div class="control-group">
+                        <div class="control-item">
+                            <label>Dari Tanggal</label>
+                            <input type="date" id="reportStartDate">
+                        </div>
+                        <div class="control-item">
+                            <label>Hingga Tanggal</label>
+                            <input type="date" id="reportEndDate">
+                        </div>
+                        <div class="control-item">
+                            <button class="btn btn-success" onclick="loadReport()">Generate Laporan</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="reportContent"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Tambah/Edit Booking -->
+    <div id="bookingModal" class="modal">
+        <div class="modal-content">
+            <h3 id="modalTitle">Tambah Booking</h3>
+            <div class="form-group">
+                <label>Lapangan</label>
+                <select id="courtSelect">
+                    <option value="">Pilih lapangan</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Tanggal</label>
+                <input type="date" id="bookingDate">
+            </div>
+            <div class="form-group">
+                <label>Jam Mulai</label>
+                <input type="time" id="startTime">
+            </div>
+            <div class="form-group">
+                <label>Jam Selesai</label>
+                <input type="time" id="endTime">
+            </div>
+            <div class="form-group">
+                <label>Nama Customer</label>
+                <input type="text" id="bookingCustomerName" placeholder="Opsional">
+            </div>
+            <div class="form-group">
+                <label>No. WhatsApp</label>
+                <input type="tel" id="bookingCustomerPhone" placeholder="Opsional">
+            </div>
+            <div class="form-group">
+                <label>Catatan</label>
+                <input type="text" id="bookingNotes" placeholder="Opsional">
+            </div>
+            <div class="modal-buttons">
+                <button class="btn btn-success" onclick="saveBooking()">Simpan</button>
+                <button class="btn btn-secondary" onclick="closeBookingModal()">Batal</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentVenueId = null;
+        let currentVenueName = null;
+        let editingBookingId = null;
+
+        async function handleLogin(event) {
+            event.preventDefault();
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+
+            try {
+                const response = await fetch('/api/admin/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    currentVenueId = data.venueId;
+                    currentVenueName = data.venueName;
+                    localStorage.setItem('adminVenueId', currentVenueId);
+                    localStorage.setItem('adminVenueName', currentVenueName);
+                    showDashboard();
+                } else {
+                    showError('username', data.message);
+                }
+            } catch (error) {
+                console.error('Login error:', error);
+                showError('username', 'Terjadi kesalahan saat login');
+            }
+        }
+
+        function showError(fieldId, message) {
+            const errorDiv = document.getElementById('loginError');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+        }
+
+        function showDashboard() {
+            document.getElementById('loginForm').style.display = 'none';
+            document.getElementById('dashboard').classList.add('active');
+            
+            // Set default dates
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('scheduleDate').value = today;
+            document.getElementById('startDate').value = today;
+            document.getElementById('endDate').value = today;
+            document.getElementById('reportStartDate').value = today;
+            document.getElementById('reportEndDate').value = today;
+
+            loadDashboardData();
+            loadCourts();
+        }
+
+        async function loadDashboardData() {
+            const today = new Date().toISOString().split('T')[0];
+            try {
+                const response = await fetch(`/api/admin/bookings/${currentVenueId}/${today}`);
+                const bookings = response.ok ? await response.json() : [];
+
+                const totalBookings = bookings.filter(b => b.status === 'booked').length;
+                const totalRevenue = bookings.reduce((sum, b) => sum + (b.price || 0), 0);
+
+                document.getElementById('dashboardContent').innerHTML = `
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-label">Venue</div>
+                            <div class="stat-value">${currentVenueName}</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Booking Hari Ini</div>
+                            <div class="stat-value">${totalBookings}</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Revenue Hari Ini</div>
+                            <div class="stat-value">Rp ${totalRevenue.toLocaleString('id-ID')}</div>
+                        </div>
+                    </div>
+                    <div class="controls">
+                        <button class="btn btn-success" onclick="showSection('schedule')">📅 Lihat Jadwal</button>
+                        <button class="btn btn-success" onclick="showSection('bookings')">📝 Lihat Booking</button>
+                    </div>
+                `;
+            } catch (error) {
+                console.error('Error loading dashboard:', error);
+            }
+        }
+
+        async function loadCourts() {
+            try {
+                const response = await fetch(`/api/courts/${currentVenueId}`);
+                const courts = await response.json();
+                
+                const select = document.getElementById('courtSelect');
+                select.innerHTML = '<option value="">Pilih lapangan</option>' + 
+                    courts.map(c => `<option value="${c.id}">${c.name} (${c.color})</option>`).join('');
+            } catch (error) {
+                console.error('Error loading courts:', error);
+            }
+        }
+
+        async function loadScheduleData() {
+            const date = document.getElementById('scheduleDate').value;
+            if (!date) return;
+
+            const content = document.getElementById('scheduleContent');
+            content.innerHTML = '<div class="loading"><div class="spinner"></div><p>Memuat jadwal...</p></div>';
+
+            try {
+                const response = await fetch(`/api/admin/bookings/${currentVenueId}/${date}`);
+                const bookings = await response.json();
+
+                const courtData = {};
+                bookings.forEach(b => {
+                    if (!courtData[b.court_id]) {
+                        courtData[b.court_id] = { name: b.court_name, color: b.color, bookings: [] };
+                    }
+                    courtData[b.court_id].bookings.push(b);
+                });
+
+                let html = '<div class="schedule-table"><table><thead><tr>' +
+                    '<th>Lapangan</th><th>Jam</th><th>Customer</th><th>Status</th><th>Harga</th><th>Aksi</th>' +
+                    '</tr></thead><tbody>';
+
+                Object.values(courtData).forEach(court => {
+                    if (court.bookings.length === 0) {
+                        html += `<tr><td colspan="6">${court.name} (${court.color}) - Kosong</td></tr>`;
+                    } else {
+                        court.bookings.forEach(b => {
+                            html += `<tr>
+                                <td>${b.court_name} (${b.color})</td>
+                                <td>${b.start_time} - ${b.end_time}</td>
+                                <td>${b.customer_name || '-'}</td>
+                                <td><span class="status-badge status-booked">${b.status}</span></td>
+                                <td>Rp ${(b.price || 0).toLocaleString('id-ID')}</td>
+                                <td>
+                                    <div class="action-buttons">
+                                        <button class="btn btn-sm btn-secondary" onclick="editBooking(${b.id})">Edit</button>
+                                        <button class="btn btn-sm btn-danger" onclick="deleteBooking(${b.id})">Hapus</button>
+                                    </div>
+                                </td>
+                            </tr>`;
+                        });
+                    }
+                });
+
+                html += '</tbody></table></div>';
+                content.innerHTML = html;
+            } catch (error) {
+                console.error('Error loading schedule:', error);
+                content.innerHTML = '<p>Gagal memuat jadwal</p>';
+            }
+        }
+
+        function showSection(sectionId) {
+            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+            document.getElementById(sectionId).classList.add('active');
+
+            document.querySelectorAll('.sidebar-item').forEach(s => s.classList.remove('active'));
+            event.target.classList.add('active');
+
+            if (sectionId === 'schedule') loadScheduleData();
+            if (sectionId === 'dashboard') loadDashboardData();
+            if (sectionId === 'bookings') loadBookings();
+        }
+
+        function openAddBookingModal() {
+            editingBookingId = null;
+            document.getElementById('modalTitle').textContent = 'Tambah Booking';
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('bookingDate').value = today;
+            document.getElementById('courtSelect').value = '';
+            document.getElementById('startTime').value = '06:00';
+            document.getElementById('endTime').value = '07:00';
+            document.getElementById('bookingCustomerName').value = '';
+            document.getElementById('bookingCustomerPhone').value = '';
+            document.getElementById('bookingNotes').value = '';
+            document.getElementById('bookingModal').classList.add('active');
+        }
+
+        function closeBookingModal() {
+            document.getElementById('bookingModal').classList.remove('active');
+        }
+
+        async function saveBooking() {
+            const courtId = document.getElementById('courtSelect').value;
+            const date = document.getElementById('bookingDate').value;
+            const startTime = document.getElementById('startTime').value;
+            const endTime = document.getElementById('endTime').value;
+            const customerName = document.getElementById('bookingCustomerName').value;
+            const customerPhone = document.getElementById('bookingCustomerPhone').value;
+            const notes = document.getElementById('bookingNotes').value;
+
+            if (!courtId || !date || !startTime || !endTime) {
+                alert('Silakan lengkapi semua field yang wajib');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/admin/bookings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        courtId: parseInt(courtId),
+                        venueId: currentVenueId,
+                        bookingDate: date,
+                        startTime,
+                        endTime,
+                        customerName,
+                        customerPhone,
+                        notes
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    alert('Booking berhasil disimpan');
+                    closeBookingModal();
+                    loadScheduleData();
+                } else {
+                    alert(data.error || 'Gagal menyimpan booking');
+                }
+            } catch (error) {
+                console.error('Error saving booking:', error);
+                alert('Terjadi kesalahan');
+            }
+        }
+
+        async function deleteBooking(bookingId) {
+            if (confirm('Yakin ingin menghapus booking ini?')) {
+                try {
+                    await fetch(`/api/admin/bookings/${bookingId}`, { method: 'DELETE' });
+                    alert('Booking berhasil dihapus');
+                    loadScheduleData();
+                } catch (error) {
+                    console.error('Error deleting booking:', error);
+                    alert('Gagal menghapus booking');
+                }
+            }
+        }
+
+        async function loadBookings() {
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+
+            if (!startDate || !endDate) return;
+
+            const content = document.getElementById('bookingsContent');
+            content.innerHTML = '<div class="loading"><div class="spinner"></div><p>Memuat data...</p></div>';
+
+            try {
+                // Load for multiple dates
+                const bookings = [];
+                const start = new Date(startDate);
+                const end = new Date(endDate);
+
+                for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+                    const dateStr = d.toISOString().split('T')[0];
+                    const response = await fetch(`/api/admin/bookings/${currentVenueId}/${dateStr}`);
+                    if (response.ok) {
+                        const data = await response.json();
+                        bookings.push(...data);
+                    }
+                }
+
+                let html = '<div class="schedule-table"><table><thead><tr>' +
+                    '<th>Tanggal</th><th>Lapangan</th><th>Jam</th><th>Customer</th><th>Harga</th><th>Aksi</th>' +
+                    '</tr></thead><tbody>';
+
+                bookings.forEach(b => {
+                    html += `<tr>
+                        <td>${b.booking_date}</td>
+                        <td>${b.court_name} (${b.color})</td>
+                        <td>${b.start_time} - ${b.end_time}</td>
+                        <td>${b.customer_name || '-'}</td>
+                        <td>Rp ${(b.price || 0).toLocaleString('id-ID')}</td>
+                        <td>
+                            <button class="btn btn-sm btn-danger" onclick="deleteBooking(${b.id})">Hapus</button>
+                        </td>
+                    </tr>`;
+                });
+
+                html += '</tbody></table></div>';
+                content.innerHTML = html || '<p>Tidak ada booking</p>';
+            } catch (error) {
+                console.error('Error loading bookings:', error);
+            }
+        }
+
+        async function loadReport() {
+            const startDate = document.getElementById('reportStartDate').value;
+            const endDate = document.getElementById('reportEndDate').value;
+
+            if (!startDate || !endDate) return;
+
+            try {
+                const response = await fetch(`/api/admin/report/${currentVenueId}/${startDate}/${endDate}`);
+                const data = await response.json();
+
+                let html = '<div style="background: white; padding: 20px; border-radius: 8px; margin-top: 20px;">';
+                html += '<h3 style="color: #667eea; margin-bottom: 15px;">Laporan Penjualan</h3>';
+                
+                if (data.length === 0) {
+                    html += '<p>Tidak ada data untuk periode ini</p>';
+                } else {
+                    let totalRevenue = 0;
+                    html += '<table style="width: 100%; border-collapse: collapse;">';
+                    html += '<tr style="background: #f8f9fa;"><th style="padding: 10px; border-bottom: 2px solid #667eea; text-align: left;">Tanggal</th>' +
+                        '<th style="padding: 10px; border-bottom: 2px solid #667eea; text-align: left;">Booking</th>' +
+                        '<th style="padding: 10px; border-bottom: 2px solid #667eea; text-align: left;">Revenue</th></tr>';
+
+                    data.forEach(d => {
+                        totalRevenue += d.total_revenue;
+                        html += `<tr style="border-bottom: 1px solid #e0e0e0;">
+                            <td style="padding: 10px;">${d.date}</td>
+                            <td style="padding: 10px;">${d.total_bookings}</td>
+                            <td style="padding: 10px;">Rp ${d.total_revenue.toLocaleString('id-ID')}</td>
+                        </tr>`;
+                    });
+
+                    html += `<tr style="background: #f0f4ff; font-weight: bold;"><td colspan="2" style="padding: 10px;">TOTAL</td>` +
+                        `<td style="padding: 10px;">Rp ${totalRevenue.toLocaleString('id-ID')}</td></tr>`;
+                    html += '</table>';
+                }
+
+                html += '</div>';
+                document.getElementById('reportContent').innerHTML = html;
+            } catch (error) {
+                console.error('Error loading report:', error);
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem('adminVenueId');
+            localStorage.removeItem('adminVenueName');
+            location.reload();
+        }
+
+        // Check login on page load
+        window.addEventListener('load', () => {
+            const venueId = localStorage.getItem('adminVenueId');
+            if (venueId) {
+                currentVenueId = parseInt(venueId);
+                currentVenueName = localStorage.getItem('adminVenueName');
+                showDashboard();
+            }
+        });
+    </script>
+</body>
+</html>

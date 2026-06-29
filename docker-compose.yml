@@ -1,0 +1,83 @@
+version: '3.8'
+
+services:
+  # Node.js Application
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: futsal-booking-app
+    ports:
+      - "${PORT:-3000}:3000"
+    environment:
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=${DB_NAME:-futsal_booking}
+      - DB_USER=${DB_USER:-futsal_user}
+      - DB_PASSWORD=${DB_PASSWORD:-secure_password}
+      - NODE_ENV=${NODE_ENV:-production}
+      - WHATSAPP_ADMIN_JOGO=${WHATSAPP_ADMIN_JOGO:-6281234567890}
+      - WHATSAPP_ADMIN_4R=${WHATSAPP_ADMIN_4R:-6281234567891}
+      - ADMIN_JOGO_PASSWORD=${ADMIN_JOGO_PASSWORD:-admin123}
+      - ADMIN_4R_PASSWORD=${ADMIN_4R_PASSWORD:-admin123}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./backups:/app/backups
+      - ./logs:/app/logs
+    restart: unless-stopped
+    networks:
+      - futsal-network
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/api/venues', (r) => {if (r.statusCode !== 200) throw new Error(r.statusCode)})"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # PostgreSQL Database
+  postgres:
+    image: postgres:13-alpine
+    container_name: futsal-postgres
+    environment:
+      - POSTGRES_DB=${DB_NAME:-futsal_booking}
+      - POSTGRES_USER=${DB_USER:-futsal_user}
+      - POSTGRES_PASSWORD=${DB_PASSWORD:-secure_password}
+      - POSTGRES_INITDB_ARGS=-c max_connections=100 -c shared_buffers=256MB
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backups:/backups
+    restart: unless-stopped
+    networks:
+      - futsal-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-futsal_user}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Optional: pgAdmin for database management
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: futsal-pgadmin
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=${PGADMIN_EMAIL:-admin@example.com}
+      - PGADMIN_DEFAULT_PASSWORD=${PGADMIN_PASSWORD:-admin}
+    ports:
+      - "5050:80"
+    depends_on:
+      - postgres
+    restart: unless-stopped
+    networks:
+      - futsal-network
+    profiles:
+      - debug
+
+networks:
+  futsal-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+    driver: local
