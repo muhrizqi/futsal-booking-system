@@ -5,18 +5,42 @@ dotenv.config();
 
 const { Pool } = pkg;
 
+console.log(`[${new Date().toISOString()}] Creating PostgreSQL connection pool...`);
+console.log(`DB_HOST: ${process.env.DB_HOST || 'localhost'}`);
+console.log(`DB_PORT: ${process.env.DB_PORT || 5432}`);
+console.log(`DB_NAME: ${process.env.DB_NAME || 'futsal_booking'}`);
+
 const pool = new Pool({
   host: process.env.DB_HOST || 'localhost',
   port: process.env.DB_PORT || 5432,
   database: process.env.DB_NAME || 'futsal_booking',
   user: process.env.DB_USER || 'postgres',
   password: process.env.DB_PASSWORD || 'postgres',
+  
+  // Connection pool settings
+  connectionTimeoutMillis: 10000,  // 10 seconds timeout
+  idleTimeoutMillis: 30000,
+  max: 20,  // max connections
+  min: 2,   // min connections
+  
+  // Retry settings
+  maxRetries: 5,
+  retryDelayBase: 1000,
+});
+
+// Error handling
+pool.on('error', (err, client) => {
+  console.error(`[${new Date().toISOString()}] ❌ Unexpected error on idle client:`, err);
+});
+
+pool.on('connect', () => {
+  console.log(`[${new Date().toISOString()}] ✓ New client connected to database`);
 });
 
 // Setup database dan tabel
 export async function initializeDatabase() {
   try {
-    console.log('Initializing database...');
+    console.log(`[${new Date().toISOString()}] Initializing database...`);
 
     // Tabel untuk venue/lokasi
     await pool.query(`

@@ -323,20 +323,49 @@ app.use((err, req, res, next) => {
 
 // ==================== START SERVER ====================
 async function startServer() {
-  try {
-    await initializeDatabase();
-    
-    app.listen(PORT, () => {
-      console.log(`🚀 Futsal Booking System running on http://localhost:${PORT}`);
-      console.log(`📱 Customer View: http://localhost:${PORT}`);
-      console.log(`👤 Admin Panel: http://localhost:${PORT}/admin`);
-    });
-  } catch (error) {
-    console.error('Failed to start server:', error);
-    process.exit(1);
+  let retries = 0;
+  const maxRetries = 15;
+  const retryDelay = 3000; // 3 seconds
+  
+  async function tryConnect() {
+    try {
+      const timestamp = new Date().toISOString();
+      console.log(`[${timestamp}] Attempting to initialize database (attempt ${retries + 1}/${maxRetries})...`);
+      
+      await initializeDatabase();
+      
+      app.listen(PORT, () => {
+        const startTime = new Date().toISOString();
+        console.log(`[${startTime}] ✅ SERVER STARTED SUCCESSFULLY`);
+        console.log(`🚀 Futsal Booking System running on http://localhost:${PORT}`);
+        console.log(`📱 Customer View: http://localhost:${PORT}`);
+        console.log(`👤 Admin Panel: http://localhost:${PORT}/admin`);
+        console.log(`✓ Database connected successfully`);
+        console.log(`✓ Node Environment: ${process.env.NODE_ENV}`);
+      });
+    } catch (error) {
+      retries++;
+      const timestamp = new Date().toISOString();
+      
+      if (retries >= maxRetries) {
+        console.error(`[${timestamp}] ❌ FATAL: Failed to connect after ${maxRetries} attempts`);
+        console.error(`Error: ${error.message}`);
+        console.error(`Host: ${process.env.DB_HOST}`);
+        console.error(`Port: ${process.env.DB_PORT}`);
+        console.error(`Database: ${process.env.DB_NAME}`);
+        process.exit(1);
+      }
+      
+      const waitTime = Math.ceil(retryDelay / 1000);
+      console.warn(`[${timestamp}] ⚠️  Database connection failed`);
+      console.warn(`Error: ${error.message}`);
+      console.warn(`Retrying in ${waitTime} seconds (${retries}/${maxRetries})...`);
+      
+      setTimeout(tryConnect, retryDelay);
+    }
   }
+  
+  tryConnect();
 }
 
 startServer();
-
-export default app;

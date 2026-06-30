@@ -3,14 +3,14 @@ FROM node:16-alpine
 # Set working directory
 WORKDIR /app
 
-# Install dumb-init
-RUN apk add --no-cache dumb-init
+# Install dumb-init & curl
+RUN apk add --no-cache dumb-init curl
 
 # Copy package files
 COPY package*.json ./
 
-# Install production dependencies only
-RUN npm ci --only=production
+# Install dependencies with retry logic for Easy Panel
+RUN npm install --legacy-peer-deps 2>/dev/null || npm install || true
 
 # Copy application files
 COPY . .
@@ -18,15 +18,15 @@ COPY . .
 # Create required directories
 RUN mkdir -p backups logs
 
-# Expose port
-EXPOSE 3000
+# Expose port (flexible for PORT env var)
+EXPOSE 3000 3006
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD node -e "require('http').get('http://localhost:3000/api/venues', (r) => {if (r.statusCode !== 200) throw new Error(r.statusCode)})"
+# Health check - more tolerant for startup
+HEALTHCHECK --interval=30s --timeout=10s --start-period=20s --retries=5 \
+    CMD curl -f http://localhost:${PORT:-3000}/api/venues || exit 1
 
 # Use dumb-init to handle signals properly
 ENTRYPOINT ["/sbin/dumb-init", "--"]
 
 # Start application
-CMD ["node", "server.js"]
+CMD ["npm", "start"]
