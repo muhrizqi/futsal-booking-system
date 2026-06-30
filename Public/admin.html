@@ -467,6 +467,7 @@
             <div class="sidebar-item" onclick="showSection('schedule')">📅 Jadwal</div>
             <div class="sidebar-item" onclick="showSection('bookings')">📝 Booking</div>
             <div class="sidebar-item" onclick="showSection('reports')">📈 Laporan</div>
+            <div class="sidebar-item" onclick="showSection('customers')">👥 Pelanggan</div>
             <div class="sidebar-divider"></div>
             <div class="sidebar-item" onclick="logout()">🚪 Logout</div>
         </div>
@@ -598,6 +599,72 @@
                 <button class="btn btn-success" onclick="saveBooking()">Simpan</button>
                 <button class="btn btn-secondary" onclick="closeBookingModal()">Batal</button>
             </div>
+        </div>
+    </div>
+
+    <div id="bookingDetailModal" class="modal">
+        <div class="modal-content" style="max-width: 600px;">
+            <h3 id="detailTitle">Detail Booking</h3>
+            
+            <div style="margin-bottom: 15px;">
+                <p><strong>Lapangan:</strong> <span id="detailCourt"></span></p>
+                <p><strong>Tanggal:</strong> <span id="detailDate"></span></p>
+                <p><strong>Jam:</strong> <span id="detailTime"></span></p>
+                <p><strong>Customer:</strong> <span id="detailCustomer"></span></p>
+                <p><strong>WhatsApp:</strong> <span id="detailPhone"></span></p>
+                <p><strong>Harga:</strong> Rp <span id="detailPrice"></span></p>
+            </div>
+            
+            <div style="border-top: 1px solid #eee; padding-top: 15px;">
+                <h4>Update Status</h4>
+            
+                <div class="form-group">
+                    <label>Status Kehadiran</label>
+                    <select id="attendedStatus">
+                    <option value="">-- Pilih Status --</option>
+                    <option value="true">✅ Datang & Bayar</option>
+                    <option value="false">❌ Tidak Datang</option>
+                    </select>
+                </div>
+            
+                <div class="form-group">
+                    <label>Metode Pembayaran</label>
+                    <select id="paymentMethod">
+                    <option value="">-- Pilih Method --</option>
+                    <option value="cash">💵 Cash</option>
+                    <option value="transfer">🏦 Transfer Bank</option>
+                    </select>
+                </div>
+            
+                <div class="form-group" id="bankSelectGroup" style="display:none;">
+                    <label>Rekening Tujuan</label>
+                    <select id="bankSelect">
+                    <option value="">-- Pilih Bank --</option>
+                    </select>
+                </div>
+            
+                <div class="form-group">
+                    <label>Catatan Admin</label>
+                    <textarea id="adminNotes" placeholder="Catatan tambahan..." style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;"></textarea>
+                </div>
+                
+                <div class="form-actions">
+                    <button class="btn btn-success" onclick="updateBookingStatus()">Simpan</button>
+                    <button class="btn btn-secondary" onclick="closeDetailModal()">Tutup</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Customers Management Tab -->
+    <div id="customers" class="section">
+        <div class="top-bar">
+            <h2>👥 Manajemen Pelanggan</h2>
+        </div>
+        
+        <div id="customersContent" class="loading">
+            <div class="spinner"></div>
+            <p>Memuat data pelanggan...</p>
         </div>
     </div>
 
@@ -951,6 +1018,151 @@
                 showDashboard();
             }
         });
+
+        let currentBookingId = null;
+
+        // Load booking detail
+        async function viewBookingDetail(bookingId) {
+        currentBookingId = bookingId;
+        
+        try {
+            const response = await fetch(`/api/admin/bookings/${bookingId}/detail`);
+            const booking = await response.json();
+            
+            document.getElementById('detailCourt').textContent = booking.court_name;
+            document.getElementById('detailDate').textContent = booking.booking_date;
+            document.getElementById('detailTime').textContent = `${booking.start_time} - ${booking.end_time}`;
+            document.getElementById('detailCustomer').textContent = booking.customer_name || '-';
+            document.getElementById('detailPhone').textContent = booking.customer_phone || '-';
+            document.getElementById('detailPrice').textContent = (booking.price || 0).toLocaleString('id-ID');
+            
+            // Load bank accounts
+            const bankRes = await fetch(`/api/admin/bank-accounts/${booking.venue_id}`);
+            const banks = await bankRes.json();
+            
+            const bankSelect = document.getElementById('bankSelect');
+            bankSelect.innerHTML = '<option value="">-- Pilih Bank --</option>' +
+            banks.map(b => `<option value="${b.id}">${b.bank_name} (${b.account_number})</option>`).join('');
+            
+            // Set current values
+            document.getElementById('attendedStatus').value = booking.attended ? 'true' : '';
+            document.getElementById('paymentMethod').value = booking.payment_method || '';
+            document.getElementById('adminNotes').value = booking.notes_admin || '';
+            
+            // Show/hide bank select
+            document.getElementById('bankSelectGroup').style.display = 
+            booking.payment_method === 'transfer' ? 'block' : 'none';
+            
+            document.getElementById('bookingDetailModal').classList.add('active');
+            } catch (error) {
+                console.error('Error loading booking detail:', error);
+                alert('Gagal memuat detail booking');
+            }
+        }
+
+        // Update booking status
+        async function updateBookingStatus() {
+        const attended = document.getElementById('attendedStatus').value;
+        const paymentMethod = document.getElementById('paymentMethod').value;
+        const bankId = document.getElementById('bankSelect').value;
+        const notes = document.getElementById('adminNotes').value;
+        
+        if (!attended || !paymentMethod) {
+            alert('Status kehadiran dan metode pembayaran harus diisi');
+            return;
+        }
+        
+        try {
+            const response = await fetch(`/api/admin/bookings/${currentBookingId}/status`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                attended: attended === 'true',
+                paymentStatus: 'paid',
+                paymentMethod: paymentMethod,
+                bankAccount: bankId ? `Bank ID: ${bankId}` : null,
+                notesAdmin: notes
+            })
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+            alert('Booking berhasil diupdate');
+            closeDetailModal();
+            loadScheduleData(); // Refresh jadwal
+            
+            // Send WhatsApp notification jika perlu
+            await sendWhatsAppNotification(data.booking);
+            } else {
+            alert('Gagal update booking');
+            }
+        } catch (error) {
+            console.error('Error updating booking:', error);
+            alert('Terjadi kesalahan');
+        }
+        }
+
+        // Send WhatsApp notification
+        async function sendWhatsAppNotification(booking) {
+        try {
+            const message = encodeURIComponent(
+            `Halo ${booking.customer_name}!\n\n` +
+            `✅ Booking Anda telah disetujui dan dijadwalkan:\n\n` +
+            `📅 Tanggal: ${booking.booking_date}\n` +
+            `⏰ Jam: ${booking.start_time} - ${booking.end_time}\n` +
+            `💰 Harga: Rp ${(booking.price || 0).toLocaleString('id-ID')}\n` +
+            `💳 Pembayaran: ${booking.payment_method === 'cash' ? 'Cash' : 'Transfer'}\n\n` +
+            `Terima kasih telah memesan lapangan futsal kami!\n` +
+            `Sampaikan sampai tepat waktu ya 😊`
+            );
+            
+            const wa = `https://wa.me/${booking.customer_phone}?text=${message}`;
+            window.open(wa, '_blank');
+        } catch (error) {
+            console.error('Error sending WhatsApp:', error);
+        }
+        }
+
+        function closeDetailModal() {
+        document.getElementById('bookingDetailModal').classList.remove('active');
+        currentBookingId = null;
+        }
+
+        // Load customers
+        async function loadCustomers() {
+        const content = document.getElementById('customersContent');
+        content.innerHTML = '<div class="loading"><div class="spinner"></div><p>Memuat...</p></div>';
+        
+        try {
+            const response = await fetch(`/api/admin/customers/${currentVenueId}/analytics`);
+            const customers = await response.json();
+            
+            let html = '<div class="schedule-table"><table><thead><tr>' +
+            '<th>Nama</th><th>WhatsApp</th><th>Booking</th><th>Kehadiran</th><th>Dibayar</th><th>Aksi</th>' +
+            '</tr></thead><tbody>';
+            
+            customers.forEach(c => {
+            html += `<tr>
+                <td>${c.name}</td>
+                <td><a href="https://wa.me/${c.phone}" target="_blank">${c.phone}</a></td>
+                <td>${c.total_bookings}</td>
+                <td>${c.attendance_rate || 0}%</td>
+                <td>Rp ${(c.total_spent || 0).toLocaleString('id-ID')}</td>
+                <td>
+                <button class="btn btn-sm btn-secondary" onclick="viewCustomerHistory('${c.phone}')">Detail</button>
+                </td>
+            </tr>`;
+            });
+            
+            html += '</tbody></table></div>';
+            content.innerHTML = html;
+        } catch (error) {
+            console.error('Error loading customers:', error);
+            content.innerHTML = '<p>Gagal memuat data pelanggan</p>';
+        }
+        }
     </script>
+
 </body>
 </html>

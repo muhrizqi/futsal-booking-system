@@ -403,6 +403,15 @@
                     <label>Nomor WhatsApp</label>
                     <input type="tel" id="customerPhone" placeholder="Contoh: 08123456789" required>
                 </div>
+		<div class="time-selection">
+    		    <h4>Pilih Jam (Bisa lebih dari 1 jam)</h4>
+                    <div class="time-grid" id="timeGrid">
+                      <!-- Akan di-generate oleh JavaScript -->
+                    </div>
+                    <p style="font-size: 0.9em; color: #666;">
+                     Selected: <span id="selectedHours">Tidak ada</span>
+                    </p>
+                </div>
                 <div class="form-group">
                     <label>Catatan (Opsional)</label>
                     <textarea id="notes" placeholder="Catatan tambahan..." rows="3"></textarea>
@@ -648,6 +657,85 @@
 
         // Load venues saat halaman dibuka
         window.addEventListener('load', loadVenues);
+
+        // Tambahkan di bagian <script> index.html
+
+        let selectedHours = [];
+
+        function selectTimeSlot(courtId, time) {
+        selectedCourt = courtId;
+        
+        // Toggle selection
+        if (selectedHours.includes(time)) {
+            selectedHours = selectedHours.filter(h => h !== time);
+        } else {
+            selectedHours.push(time);
+        }
+        
+        // Sort hours
+        selectedHours.sort();
+        
+        // Update display
+        document.getElementById('selectedHours').textContent = 
+            selectedHours.length > 0 ? selectedHours.join(', ') : 'Tidak ada';
+        
+        // Update visual
+        document.querySelectorAll('.time-slot').forEach(slot => {
+            if (selectedHours.includes(slot.textContent)) {
+            slot.classList.add('selected');
+            } else {
+            slot.classList.remove('selected');
+            }
+        });
+        
+        // Show form jika ada jam yang dipilih
+        if (selectedHours.length > 0) {
+            document.getElementById('bookingForm').classList.add('active');
+        }
+        }
+
+        function submitBooking() {
+        if (selectedHours.length === 0) {
+            alert('Pilih minimal 1 jam');
+            return;
+        }
+        
+        const name = document.getElementById('customerName').value.trim();
+        const phone = document.getElementById('customerPhone').value.trim();
+        
+        if (!name || !phone) {
+            alert('Nama dan WhatsApp wajib diisi');
+            return;
+        }
+        
+        // Format nomor WA
+        let whatsappPhone = phone.replace(/\D/g, '');
+        if (whatsappPhone.startsWith('0')) {
+            whatsappPhone = '62' + whatsappPhone.substring(1);
+        }
+        
+        // Buat message dengan multiple hours
+        const hours = selectedHours.join(', ');
+        const message = encodeURIComponent(
+            `Halo, saya ingin pesan lapangan futsal:\n\n` +
+            `📍 Lokasi: ${venueName}\n` +
+            `📅 Tanggal: ${selectedDate}\n` +
+            `⏰ Jam: ${hours}\n` +
+            `👤 Nama: ${name}\n` +
+            `📞 WhatsApp: ${phone}\n\n` +
+            `Terima kasih!`
+        );
+        
+        // Redirect ke WhatsApp
+        const whatsappUrl = `https://wa.me/${whatsappAdmin}?text=${message}`;
+        window.open(whatsappUrl, '_blank');
+        
+        // Reset
+        selectedHours = [];
+        document.getElementById('customerName').value = '';
+        document.getElementById('customerPhone').value = '';
+        document.getElementById('bookingForm').classList.remove('active');
+        }        
     </script>
 </body>
 </html>

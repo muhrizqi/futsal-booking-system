@@ -358,4 +358,232 @@ async function startServer() {
 
 startServer();
 
+// ===== BOOKING UPDATES =====
+ 
+// 12. PUT - Update booking status (attended, payment, etc)
+app.put('/api/admin/bookings/:bookingId/status', async (req, res) => {
+  try {
+    const { bookingId } = req.params;
+    const { attended, paymentStatus, paymentMethod, bankAccount, notesAdmin, cancelled, cancelReason } = req.body;
+ 
+    const result = await pool.query(`
+      UPDATE bookings 
+      SET attended = COALESCE($1, attended),
+          payment_status = COALESCE($2, payment_status),
+          payment_method = COALESCE($3, payment_method),
+          bank_account = COALESCE($4, bank_account),
+          notes_admin = COALESCE($5, notes_admin),
+          cancelled = COALESCE($6, cancelled),
+          cancel_reason = COALESCE($7, cancel_reason),
+          updated_at = CURRENT_TIMESTAMP
+      WHERE id = $8
+      RETURNING *
+    `, [attended, paymentStatus, paymentMethod, bankAccount, notesAdmin, cancelled, cancelReason, bookingId]);
+ 
+    if (result.rows.length > 0) {
+      res.json({ success: true, booking: result.rows[0] });
+    } else {
+      res.status(404).json({ error: 'Booking not found' });
+    }
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to update booking' });
+  }
+});
+ 
+// ===== CUSTOMER MANAGEMENT =====
+ 
+// 13. GET - List semua pelanggan di venue
+app.get('/api/admin/customers/:venueId', async (req, res) => {
+  try {
+    const { venueId } = req.params;
+ 
+    const result = await pool.query(`
+      SELECT 
+        id,
+        phone,
+        name,
+        email,
+        total_bookings,
+        total_attended,
+        total_cancelled,
+        total_noshow,
+        total_spent,
+        last_booking_date,
+        ROUND(CAST(total_attended AS FLOAT) / NULLIF(total_bookings, 0) * 100, 1) as attendance_rate
+      FROM customers
+      WHERE venue_id = $1
+      ORDER BY last_booking_date DESC NULLS LAST
+    `, [venueId]);
+ 
+    res.json(result.rows);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+ 
+// 14. GET - Detail pelanggan dengan booking history
+app.get('/api/admin/customers/:venueId/:customerId', async (req, res) => {
+  try {
+    const { venueId, customerId } = req.params;
+ 
+    // Get customer detail
+    const customerResult = await pool.query(`
+      SELECT 
+        id,
+        phone,
+        name,
+        email,
+        total_bookings,
+        total_attended,
+        total_cancelled,
+        total_noshow,
+        total_spent,
+        ROUND(CAST(total_attended AS FLOAT) / NULLIF(total_bookings, 0) * 100, 1) as attendance_rate
+      FROM customers
+      WHERE id = $1 AND venue_id = $2
+    `, [customerId, venueId]);
+ 
+    if (customerResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Customer not found' });
+    }
+ 
+    const customer = customerResult.rows[0];
+ 
+    // Get booking history
+    const historyResult = await pool.query(`
+      SELECT 
+        b.id,
+        b.booking_date,
+        c.name as court_name,
+        c.color,
+        b.start_time,
+        b.end_time,
+        b.price,
+        b.attended,
+        b.payment_status,
+        b.payment_method,
+        b.cancelled,
+        b.cancel_reason,
+        b.notes_admin,
+        TO_CHAR(b.booking_date, 'Day') as day_name
+      FROM bookings b
+      JOIN courts c ON b.court_id = c.id
+      WHERE b.customer_phone = $1 AND b.venue_id = $2
+      ORDER BY b.booking_date DESC
+      LIMIT 50
+    `, [customer.phone, venueId]);
+ 
+    // Get booking patterns
+    const patternResult = await pool.query(`
+      SELECT 
+        TO_CHAR(booking_date, 'Day') as day_name,
+        EXTRACT(ISODOW FROM booking_date) as day_of_week,
+        COUNT(*) as count,
+        ROUND(AVG(EXTRACT(HOUR FROM start_time)), 0)::INT as avg_hour
+      FROM bookings
+      WHERE customer_phone = $1 AND venue_id = $2
+      GROUP BY TO_CHAR(booking_date, 'Day'), EXTRACT(ISODOW FROM booking_date)
+      ORDER BY EXTRACT(ISODOW FROM booking_date)
+    `, [customer.phone, venueId]);
+ 
+    res.json({
+      customer,
+      history: historyResult.rows,
+      patterns: patternResult.rows
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+ 
+// 15. GET - Customer analytics / insights
+app.get('/api/admin/customers/:venueId/analytics', async (req, res) => {
+  try {
+    const { venueId } = req.params;
+ 
+    const result = await pool.query(`
+      SELECT 
+        c.id,
+        c.name,
+        c.phone,
+        c.total_bookings,
+        c.total_attended,
+        c.total_cancelled,
+        c.total_noshow,
+        c.total_spent,
+        ROUND(CAST(c.total_attended AS FLOAT) / NULLIF(c.total_bookings, 0) * 100, 1) as attendance_rate,
+        ROUND(CAST(c.total_cancelled AS FLOAT) / NULLIF(c.total_bookings, 0) * 100, 1) as cancel_rate,
+        ROUND(CAST(c.total_noshow AS FLOAT) / NULLIF(c.total_bookings - c.total_cancelled, 0) * 100, 1) as noshow_rate,
+        c.last_booking_date,
+        CASE 
+          WHEN c.total_bookings > 10 THEN 'VIP'
+          WHEN c.total_bookings > 5 THEN 'Regular'
+          ELSE 'New'
+        END as customer_type
+      FROM customers c
+      WHERE c.venue_id = $1
+      ORDER BY c.total_bookings DESC
+    `, [venueId]);
+ 
+    res.json(result.rows);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+ 
+// 16. GET - Bank accounts untuk venue
+app.get('/api/admin/bank-accounts/:venueId', async (req, res) => {
+  try {
+    const { venueId } = req.params;
+ 
+    const result = await pool.query(`
+      SELECT 
+        id,
+        bank_name,
+        account_number,
+        account_holder,
+        is_active
+      FROM bank_accounts
+      WHERE venue_id = $1 AND is_active = TRUE
+      ORDER BY id
+    `, [venueId]);
+ 
+    res.json(result.rows);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+ 
+// 17. GET - Booking details untuk modal edit
+app.get('/api/admin/bookings/:bookingId/detail', async (req, res) => {
+  try {
+    const { bookingId } = req.params;
+ 
+    const result = await pool.query(`
+      SELECT 
+        b.*,
+        c.name as court_name,
+        v.id as venue_id
+      FROM bookings b
+      JOIN courts c ON b.court_id = c.id
+      JOIN venues v ON b.venue_id = v.id
+      WHERE b.id = $1
+    `, [bookingId]);
+ 
+    if (result.rows.length > 0) {
+      res.json(result.rows[0]);
+    } else {
+      res.status(404).json({ error: 'Booking not found' });
+    }
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
 export default app;
