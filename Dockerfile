@@ -1,32 +1,27 @@
 FROM node:16-alpine
 
-# Set working directory
 WORKDIR /app
 
-# Install dumb-init & curl
-RUN apk add --no-cache dumb-init curl
+# Install curl untuk health check
+RUN apk add --no-cache curl
 
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies with retry logic for Easy Panel
-RUN npm install --legacy-peer-deps 2>/dev/null || npm install || true
+# Install dependencies
+RUN npm install
 
-# Copy application files
+# Copy application
 COPY . .
 
-# Create required directories
+# Create directories
 RUN mkdir -p backups logs
 
-# Expose port (flexible for PORT env var)
-EXPOSE 3000 3006
+EXPOSE 3006
 
-# Health check - more tolerant for startup
-HEALTHCHECK --interval=30s --timeout=10s --start-period=20s --retries=5 \
-    CMD curl -f http://localhost:${PORT:-3000}/api/venues || exit 1
+# Simple health check
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
+    CMD curl -f http://localhost:3006/api/venues || exit 1
 
-# Use dumb-init to handle signals properly
-ENTRYPOINT ["/sbin/dumb-init", "--"]
-
-# Start application
+# Start app
 CMD ["npm", "start"]

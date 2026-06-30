@@ -324,48 +324,38 @@ app.use((err, req, res, next) => {
 // ==================== START SERVER ====================
 async function startServer() {
   let retries = 0;
-  const maxRetries = 15;
-  const retryDelay = 3000; // 3 seconds
+  const maxRetries = 10;
   
-  async function tryConnect() {
+  async function connect() {
     try {
-      const timestamp = new Date().toISOString();
-      console.log(`[${timestamp}] Attempting to initialize database (attempt ${retries + 1}/${maxRetries})...`);
+      console.log(`\n[${new Date().toISOString()}] Attempt ${retries + 1}/${maxRetries}: Initializing database...`);
       
       await initializeDatabase();
       
       app.listen(PORT, () => {
-        const startTime = new Date().toISOString();
-        console.log(`[${startTime}] ✅ SERVER STARTED SUCCESSFULLY`);
-        console.log(`🚀 Futsal Booking System running on http://localhost:${PORT}`);
-        console.log(`📱 Customer View: http://localhost:${PORT}`);
-        console.log(`👤 Admin Panel: http://localhost:${PORT}/admin`);
-        console.log(`✓ Database connected successfully`);
-        console.log(`✓ Node Environment: ${process.env.NODE_ENV}`);
+        console.log(`\n✅ SUCCESS! Server started on port ${PORT}\n`);
+        console.log(`📱 Customer: http://localhost:${PORT}`);
+        console.log(`👤 Admin: http://localhost:${PORT}/admin`);
+        console.log(`🔗 API: http://localhost:${PORT}/api/venues\n`);
       });
     } catch (error) {
       retries++;
-      const timestamp = new Date().toISOString();
+      console.error(`❌ Error: ${error.message}`);
       
       if (retries >= maxRetries) {
-        console.error(`[${timestamp}] ❌ FATAL: Failed to connect after ${maxRetries} attempts`);
-        console.error(`Error: ${error.message}`);
-        console.error(`Host: ${process.env.DB_HOST}`);
-        console.error(`Port: ${process.env.DB_PORT}`);
-        console.error(`Database: ${process.env.DB_NAME}`);
+        console.error(`\n💥 FATAL: Max retries (${maxRetries}) reached. Exiting.\n`);
         process.exit(1);
       }
       
-      const waitTime = Math.ceil(retryDelay / 1000);
-      console.warn(`[${timestamp}] ⚠️  Database connection failed`);
-      console.warn(`Error: ${error.message}`);
-      console.warn(`Retrying in ${waitTime} seconds (${retries}/${maxRetries})...`);
-      
-      setTimeout(tryConnect, retryDelay);
+      const delay = 2000;
+      console.log(`⏳ Retrying in ${delay/1000}s...\n`);
+      setTimeout(connect, delay);
     }
   }
   
-  tryConnect();
+  connect();
 }
 
 startServer();
+
+export default app;
